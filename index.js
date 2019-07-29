@@ -18,6 +18,13 @@ function write(bucket, filename, metadata = {}) {
     }));
 }
 
+function writeWithId(bucket, id, filename, metadata = {}) {
+    return Promise.resolve(bucket.openUploadStreamWithId(id, filename, {
+        metadata: metadata,
+        disableMD5: true
+    }));
+}
+
 function streamById(bucket, id, options = { start: 0, end: 0 }) {
     return Promise.resolve(bucket.openDownloadStream(new mongodb.ObjectId(id), {
         start: options.start || 0,
@@ -54,7 +61,8 @@ class GFSBucket {
 
         this._express_endpoints = {
             create: (req, res) => {
-                this.write(req.headers['filename'], {
+                let id = new mongodb.ObjectId();
+                this.writeWithId(id, req.headers['filename'], {
                     contentType: req.headers['content-type']
                 })
                 .then(stream => {
@@ -63,9 +71,14 @@ class GFSBucket {
                         res.json(err);
                     })
                     .on('finish', () => {
-                        res.json({
-                            message: 'OK'
-                        });
+                        this._bucket.find({ _id: id })
+                        .toArray()
+                        .then(docs => {
+                            res.json(docs[0]);
+                        })
+                        .catch(err => {
+                            res.json(err);
+                        })
                     });
                 })
                 .catch(err => {
@@ -108,6 +121,10 @@ class GFSBucket {
 
     write(filename, metadata = {}) {
         return write(this._bucket, filename, metadata);
+    }
+
+    writeWithId(id, filename, metadata = {}) {
+        return writeWithId(this._bucket, id, filename, metadata);
     }
 
     streamById(id, options = { start: 0, end: 0 }) {
