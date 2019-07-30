@@ -46,6 +46,11 @@ function removeById(bucket, id) {
     });
 }
 
+function findById(bucket, id) {
+    return bucket.find({ _id: new mongodb.ObjectId(id) })
+    .toArray();
+}
+
 function list(bucket) {
     return bucket.find().toArray();
 }
@@ -68,48 +73,71 @@ class GFSBucket {
                 .then(stream => {
                     req.pipe(stream);
                     stream.on('error', err => {
-                        res.json(err);
+                        res.status(400).json(err);
                     })
                     .on('finish', () => {
-                        this._bucket.find({ _id: id })
-                        .toArray()
+                        this.findById(id)
                         .then(docs => {
-                            res.json(docs[0]);
+                            res.status(200).json(docs[0]);
                         })
                         .catch(err => {
-                            res.json(err);
+                            res.status(400).json(err);
                         })
                     });
                 })
                 .catch(err => {
-                    res.json(err);
+                    res.status(400).json(err);
                 });
             },
             streamById: (req, res) => {
-                this.streamById(req.params.id)
-                .then(stream => stream.pipe(res))
+                this.findById(req.params.id)
+                .then(docs => {
+                    if (docs[0]) {
+                        this.streamById(docs[0]._id)
+                        .then(stream => stream.pipe(res))
+                        .catch(err => {
+                            res.status(400).json(err);
+                        });
+                    }
+                    else {
+                        res.status(404).json({
+                            message: 'Not Found'
+                        })
+                    }
+                })
                 .catch(err => {
-                    res.json(err);
+                    res.status(400).json(err);
                 });
             },
             removeById: (req, res) => {
-                this.removeById(req.params.id)
-                .then(message => {
-                    res.json({
-                        message: message
-                    });
+                this.findById(req.params.id)
+                .then(docs => {
+                    if (docs[0]) {
+                        this.removeById(docs[0]._id)
+                        .then(message => {
+                            res.status(200).json(docs[0]);
+                        })
+                        .catch(err => {
+                            res.status(400).json(err);
+                        });
+                    }
+                    else {
+                        res.status(404).json({
+                            message: 'Not Found'
+                        })
+                    }
                 })
                 .catch(err => {
-                    res.json(err);
+                    res.status(400).json(err);
                 });
             },
             list: (req, res) => {
                 this.list()
                 .then(docs => {
-                    res.json(docs);
+                    res.status(200).json(docs);
                 })
                 .catch(err => {
-                    res.json(err);
+                    res.status(400).json(err);
                 });
             }
         }
@@ -135,6 +163,10 @@ class GFSBucket {
         return removeById(this._bucket, id);
     }
 
+    findById(id) {
+        return findById(this._bucket, id);
+    }
+
     list() {
         return list(this._bucket);
     }
@@ -143,7 +175,9 @@ class GFSBucket {
 module.exports.client = client;
 module.exports.bucket = bucket;
 module.exports.write = write;
+module.exports.writeWithId = writeWithId;
 module.exports.streamById = streamById;
 module.exports.removeById = removeById;
+module.exports.findById = findById;
 module.exports.list = list;
 module.exports.GFSBucket = GFSBucket;
