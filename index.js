@@ -26,10 +26,18 @@ function writeWithId(bucket, id, filename, metadata = {}) {
 }
 
 function streamById(bucket, id, options = { start: 0, end: 0 }) {
-    return Promise.resolve(bucket.openDownloadStream(new mongodb.ObjectId(id), {
-        start: options.start || 0,
-        end: options.end || 0
-    }));
+    return new Promise((resolve, reject) => {
+        try {
+            let _id = new mongodb.ObjectId(id);
+            resolve(bucket.openDownloadStream(_id, {
+                start: options.start || 0,
+                end: options.end || 0
+            }));
+        }
+        catch(err) {
+            reject(err);
+        }
+    });
 }
 
 function removeById(bucket, id) {
@@ -47,8 +55,16 @@ function removeById(bucket, id) {
 }
 
 function findById(bucket, id) {
-    return bucket.find({ _id: new mongodb.ObjectId(id) })
-    .toArray();
+    return new Promise((resolve, reject) => {
+        try {
+            let _id = new mongodb.ObjectId(id);
+            resolve(bucket.find({ _id: _id })
+            .toArray());
+        }
+        catch(err) {
+            reject(err);
+        }
+    });
 }
 
 function list(bucket) {
@@ -106,7 +122,9 @@ class GFSBucket {
                     }
                 })
                 .catch(err => {
-                    res.status(400).json(err);
+                    res.status(400).json({
+                        message: err.message
+                    });
                 });
             },
             removeById: (req, res) => {

@@ -1,6 +1,6 @@
 {
   "name": "gridfs-bucket",
-  "version": "0.7.0",
+  "version": "0.7.3",
   "description": "This wrapper for MongoDB GridFSBucket",
   "main": "index.js",
   "scripts": {
