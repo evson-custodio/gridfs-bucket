@@ -3,7 +3,7 @@ const mongodb = require('mongodb');
 
 function client(uri, options) {
     return new mongodb
-        .MongoClient(uri, Object.assign({ useNewUrlParser: true }, options))
+        .MongoClient(uri, Object.assign({ useNewUrlParser: true, useUnifiedTopology: true }, options))
         .connect();
 }
 
